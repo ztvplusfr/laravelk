@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    
+    /* Palette Halloween */
+    --color-halloween-orange: #ff6b35;
+    --color-halloween-orange-light: #ff8c5a;
+    --color-halloween-orange-dark: #e55a2b;
+    --color-halloween-purple: #8b5cf6;
+    --color-halloween-purple-light: #a78bfa;
+    --color-halloween-purple-dark: #7c3aed;
+    --color-halloween-green: #10b981;
+    --color-halloween-green-light: #34d399;
+    --color-halloween-green-dark: #059669;
+    --color-halloween-red: #ef4444;
+    --color-halloween-red-light: #f87171;
+    --color-halloween-red-dark: #dc2626;
+    --color-halloween-yellow: #f59e0b;
+    --color-halloween-yellow-light: #fbbf24;
+    --color-halloween-yellow-dark: #d97706;
+    
+    /* Couleurs de fond */
+    --color-bg-primary: #0a0a0a;
+    --color-bg-secondary: #1a1a1a;
+    --color-bg-tertiary: #2a2a2a;
+    
+    /* Couleurs de texte */
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #e5e5e5;
+    --color-text-muted: #a3a3a3;
+    
+    /* Couleurs d'accent */
+    --color-accent-primary: var(--color-halloween-orange);
+    --color-accent-secondary: var(--color-halloween-purple);
+    --color-accent-tertiary: var(--color-halloween-green);
+}
