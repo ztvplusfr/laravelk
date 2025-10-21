@@ -105,6 +105,25 @@
             <form method="POST" action="{{ route('register.step1.process') }}" enctype="multipart/form-data" class="space-y-6">
                 @csrf
                 
+                <!-- Avatar Field -->
+                <div class="flex flex-col items-center mb-6">
+                    <div class="relative group mb-2">
+                        <div id="avatar-preview" class="w-24 h-24 rounded-full bg-bg-secondary border-2 border-dashed border-halloween-orange/50 flex items-center justify-center overflow-hidden">
+                            <i class="fas fa-user text-3xl text-text-muted"></i>
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <label for="avatar" class="cursor-pointer p-2 bg-halloween-orange/80 hover:bg-halloween-orange rounded-full transition-colors duration-300">
+                                <i class="fas fa-camera text-white"></i>
+                            </label>
+                        </div>
+                        <input type="file" id="avatar" name="avatar" accept="image/*" class="hidden">
+                    </div>
+                    <p class="text-xs text-text-muted mt-1">Cliquez sur l'icône pour ajouter une photo</p>
+                    @error('avatar')
+                        <p class="text-halloween-red text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                
                 <!-- Name Field -->
                 <div>
                     <label for="name" class="block text-text-primary font-semibold mb-2">
@@ -201,17 +220,37 @@
 
     <script>
         // Avatar preview functionality
-        document.getElementById('avatar').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('avatar-preview');
-                    const previewImg = document.getElementById('preview-img');
-                    previewImg.src = e.target.result;
-                    preview.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
+        document.addEventListener('DOMContentLoaded', function() {
+            const avatarInput = document.getElementById('avatar');
+            const avatarPreview = document.getElementById('avatar-preview');
+            
+            if (avatarInput && avatarPreview) {
+                avatarInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Vérifier la taille du fichier (max 2MB)
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('La taille du fichier ne doit pas dépasser 2MB');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // Vérifier le type de fichier
+                        if (!file.type.match('image.*')) {
+                            alert('Veuillez sélectionner une image valide (JPEG, PNG, GIF)');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // Afficher l'aperçu de l'image
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            avatarPreview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
             }
         });
 

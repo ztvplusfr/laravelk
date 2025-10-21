@@ -91,19 +91,37 @@ class AuthController extends Controller
                 ->withInput();
         }
 
-        $avatarPath = null;
+        $avatarUrl = null;
         if ($request->hasFile('avatar')) {
-            $avatar = $request->file('avatar');
-            $avatarName = time() . '_' . $avatar->getClientOriginalName();
-            $avatarPath = $avatar->storeAs('avatars', $avatarName, 'public');
+            try {
+                $supabaseService = new \App\Services\SupabaseStorageService();
+                $avatarUrl = $supabaseService->upload(
+                    $request->file('avatar'),
+                    'avatar-' . time()
+                );
+                
+                if (!$avatarUrl) {
+                    throw new \Exception('Échec du téléchargement de l\'avatar.');
+                }
+            } catch (\Exception $e) {
+                \Log::error('Erreur lors de l\'upload de l\'avatar: ' . $e->getMessage());
+                return redirect()->back()
+                    ->with('error', 'Une erreur est survenue lors du téléchargement de l\'avatar. Veuillez réessayer.')
+                    ->withInput();
+            }
         }
 
         // Stocker les données de l'étape 1 en session
-        $request->session()->put('register_step1', [
+        $step1Data = [
             'name' => $request->name,
             'email' => $request->email,
-            'avatar' => $avatarPath,
-        ]);
+        ];
+        
+        if ($avatarUrl) {
+            $step1Data['avatar_url'] = $avatarUrl;
+        }
+        
+        $request->session()->put('register_step1', $step1Data);
 
         return redirect()->route('register.step2');
     }
@@ -155,13 +173,17 @@ class AuthController extends Controller
         $step1Data = $request->session()->get('register_step1');
 
         // Créer l'utilisateur
-        $user = User::create([
+        $userData = [
             'name' => $step1Data['name'],
             'email' => $step1Data['email'],
             'password' => Hash::make($request->password),
-            'avatar' => $step1Data['avatar'] ?? null,
-            'role' => 'user', // Rôle par défaut
-        ]);
+        ];
+        
+        if (isset($step1Data['avatar_url'])) {
+            $userData['avatar'] = $step1Data['avatar_url'];
+        }
+        
+        $user = User::create($userData);
 
         // Nettoyer la session
         $request->session()->forget('register_step1');

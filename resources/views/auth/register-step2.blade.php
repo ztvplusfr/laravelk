@@ -79,8 +79,8 @@
             <div class="mb-6 p-4 bg-bg-secondary rounded-lg border border-halloween-green">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
-                        @if($step1Data['avatar'])
-                            <img src="{{ asset('storage/' . $step1Data['avatar']) }}" alt="Avatar" class="w-12 h-12 rounded-full border-2 border-halloween-orange">
+                        @if(isset($step1Data['avatar_url']) && $step1Data['avatar_url'])
+                            <img src="{{ $step1Data['avatar_url'] }}" alt="Avatar" class="w-12 h-12 rounded-full border-2 border-halloween-orange object-cover">
                         @else
                             <div class="w-12 h-12 bg-halloween-orange rounded-full flex items-center justify-center">
                                 <i class="fas fa-user text-text-primary"></i>

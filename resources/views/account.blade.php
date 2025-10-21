@@ -6,6 +6,71 @@
     <title>Mon Compte - ZTVPlus</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    
+    <script>
+        // Gestion du téléchargement d'avatar
+        document.addEventListener('DOMContentLoaded', function() {
+            const avatarUpload = document.getElementById('avatar-upload');
+            const avatarForm = document.getElementById('avatar-form');
+            
+            if (avatarUpload && avatarForm) {
+                // Lorsqu'un fichier est sélectionné, soumettre automatiquement le formulaire
+                avatarUpload.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        // Vérifier la taille du fichier (max 2MB)
+                        if (this.files[0].size > 2 * 1024 * 1024) {
+                            alert('La taille du fichier ne doit pas dépasser 2MB');
+                            return;
+                        }
+                        
+                        // Vérifier le type de fichier
+                        const fileType = this.files[0].type;
+                        if (!fileType.match('image.*')) {
+                            alert('Veuillez sélectionner une image valide (JPEG, PNG, GIF)');
+                            return;
+                        }
+                        
+                        // Afficher un indicateur de chargement
+                        const button = document.querySelector('button[type="submit"]');
+                        const originalButtonText = button ? button.innerHTML : '';
+                        
+                        if (button) {
+                            button.disabled = true;
+                            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Téléchargement...';
+                        }
+                        
+                        // Soumettre le formulaire
+                        avatarForm.submit();
+                    }
+                });
+                
+                // Gérer la soumission du formulaire
+                avatarForm.addEventListener('submit', function(e) {
+                    if (!avatarUpload.files || !avatarUpload.files[0]) {
+                        e.preventDefault();
+                    }
+                });
+            }
+            
+            // Afficher un aperçu de l'image sélectionnée
+            const fileInput = document.getElementById('avatar-upload');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.querySelector('.relative.group img');
+                            if (img) {
+                                img.src = e.target.result;
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 <body class="bg-black min-h-screen font-sans">
     <!-- Header -->
@@ -68,12 +133,34 @@
                         </h2>
                         
                         <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 mb-4 md:mb-6">
-                            @if($user->avatar)
-                                <img src="{{ asset('storage/' . $user->avatar) }}" alt="Avatar" class="w-24 h-24 rounded-full border-4 border-halloween-orange shadow-lg">
-                            @else
-                                <div class="w-24 h-24 bg-gradient-to-br from-halloween-orange to-halloween-yellow rounded-full flex items-center justify-center shadow-lg">
-                                    <i class="fas fa-user text-white text-4xl"></i>
+                            <div class="relative group">
+                                @if($user->avatar)
+                                    <img src="{{ $user->avatar }}" alt="Avatar" class="w-24 h-24 rounded-full border-4 border-halloween-orange shadow-lg object-cover">
+                                @else
+                                    <div class="w-24 h-24 bg-gradient-to-br from-halloween-orange to-halloween-yellow rounded-full flex items-center justify-center shadow-lg">
+                                        <i class="fas fa-user text-white text-4xl"></i>
+                                    </div>
+                                @endif
+                                <div class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <label for="avatar-upload" class="cursor-pointer p-2 bg-halloween-orange/80 hover:bg-halloween-orange rounded-full transition-colors duration-300">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </label>
                                 </div>
+                            </div>
+                            
+                            <form id="avatar-form" action="{{ route('account.update-avatar') }}" method="POST" enctype="multipart/form-data" class="hidden">
+                                @csrf
+                                <input type="file" id="avatar-upload" name="avatar" accept="image/*" class="hidden">
+                            </form>
+                            
+                            @if($user->avatar)
+                            <form action="{{ route('account.delete-avatar') }}" method="POST" class="mt-2 sm:mt-0">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-xs text-halloween-red hover:text-halloween-red-light transition-colors duration-300 flex items-center">
+                                    <i class="fas fa-trash-alt mr-1"></i> Supprimer l'avatar
+                                </button>
+                            </form>
                             @endif
                             
                             <div class="flex-1 text-center sm:text-left w-full sm:w-auto">

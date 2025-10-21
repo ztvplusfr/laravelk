@@ -33,6 +33,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/watch/movie/{movieId}/{videoId?}', [App\Http\Controllers\HomeController::class, 'watchMovie'])->name('watch.movie');
     Route::get('/account', [App\Http\Controllers\HomeController::class, 'account'])->name('account');
     Route::put('/account/timezone', [App\Http\Controllers\HomeController::class, 'updateTimezone'])->name('account.update-timezone');
+    Route::post('/account/avatar', [App\Http\Controllers\HomeController::class, 'updateAvatar'])->name('account.update-avatar');
+    Route::delete('/account/avatar', [App\Http\Controllers\HomeController::class, 'deleteAvatar'])->name('account.delete-avatar');
     Route::delete('/account/session/{id}', [App\Http\Controllers\HomeController::class, 'destroySession'])->name('session.destroy');
     
     // Routes watchlist

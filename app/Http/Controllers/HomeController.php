@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Movie;
 use App\Models\Series;
 use App\Models\History;
+use App\Services\SupabaseStorageService;
+use Illuminate\Support\Facades\Log;
 
 class HomeController extends Controller
 {
@@ -350,6 +352,179 @@ class HomeController extends Controller
     {
         $user = Auth::user();
         
+        // Récupérer les sessions actives de l'utilisateur
+        $sessions = collect();
+        
+        if (config('session.driver') === 'database') {
+            $sessions = \DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->orderBy('last_activity', 'desc')
+                ->get()
+                ->map(function ($session) {
+                    $payload = base64_decode($session->payload);
+                    $sessionData = @unserialize($payload);
+                    
+                    if ($sessionData === false) {
+                        $sessionData = [];
+                    }
+                    
+                    $userAgent = $this->parseUserAgent($session->user_agent);
+                    
+                    return [
+                        'id' => $session->id,
+                        'ip_address' => $session->ip_address,
+                        'user_agent' => $session->user_agent,
+                        'last_activity' => $session->last_activity,
+                        'is_current' => $session->id === session()->getId(),
+                        'os' => $userAgent['os'] ?? 'Inconnu',
+                        'browser' => $userAgent['browser'] ?? 'Inconnu',
+                        'device' => $userAgent['device'] ?? 'Inconnu',
+                        'device_type' => $userAgent['device'] ?? 'Inconnu',
+                    ];
+                });
+        }
+        
+        return view('account', [
+            'user' => $user,
+            'sessions' => $sessions,
+        ]);
+    }
+    
+    /**
+     * Met à jour l'avatar de l'utilisateur
+     */
+    public function updateAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+        
+        $user = Auth::user();
+        
+        try {
+            $supabaseService = new SupabaseStorageService();
+            
+            // Supprimer l'ancien avatar s'il existe
+            if ($user->avatar && strpos($user->avatar, 'supabase.co') !== false) {
+                $supabaseService->delete($user->avatar);
+            }
+            
+            // Télécharger le nouvel avatar
+            $avatarUrl = $supabaseService->upload(
+                $request->file('avatar'),
+                'avatar-' . $user->id
+            );
+            
+            if (!$avatarUrl) {
+                throw new \Exception('Échec du téléchargement de l\'avatar.');
+            }
+            
+            // Mettre à jour le profil utilisateur
+            $user->avatar = $avatarUrl;
+            $user->save();
+            
+            return back()->with('success', 'Votre avatar a été mis à jour avec succès !');
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de l\'avatar: ' . $e->getMessage());
+            return back()->with('error', 'Une erreur est survenue lors de la mise à jour de votre avatar.');
+        }
+    }
+    
+    /**
+     * Supprime l'avatar de l'utilisateur
+     */
+    public function deleteAvatar()
+    {
+        $user = Auth::user();
+        
+        if ($user->avatar) {
+            try {
+                $supabaseService = new SupabaseStorageService();
+                
+                // Supprimer l'avatar de Supabase
+                if (strpos($user->avatar, 'supabase.co') !== false) {
+                    $supabaseService->delete($user->avatar);
+                }
+                
+                // Mettre à jour le profil utilisateur
+                $user->avatar = null;
+                $user->save();
+                
+                return back()->with('success', 'Votre avatar a été supprimé avec succès !');
+                
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de la suppression de l\'avatar: ' . $e->getMessage());
+                return back()->with('error', 'Une erreur est survenue lors de la suppression de votre avatar.');
+            }
+        }
+        
+        return back();
+    }
+    
+    /**
+     * Parse l'user agent pour en extraire des informations lisibles
+     */
+    protected function parseUserAgent($userAgent)
+    {
+        $result = [
+            'os' => 'Inconnu',
+            'browser' => 'Inconnu',
+            'device' => 'Ordinateur',
+        ];
+        
+        // Détection du navigateur
+        if (preg_match('/(Chrome|Firefox|Safari|Edge|Opera|OPR|MSIE|Trident)/i', $userAgent, $matches)) {
+            $result['browser'] = $matches[1];
+            
+            // Correction pour les versions récentes d'Edge
+            if ($result['browser'] === 'OPR') {
+                $result['browser'] = 'Opera';
+            } elseif ($result['browser'] === 'Trident' || $result['browser'] === 'MSIE') {
+                $result['browser'] = 'Internet Explorer';
+            }
+        }
+        
+        // Détection du système d'exploitation
+        if (preg_match('/(Windows|Linux|Mac OS X|iOS|Android)/i', $userAgent, $matches)) {
+            $os = $matches[1];
+            
+            if ($os === 'Mac OS X') {
+                $os = 'macOS';
+            } elseif ($os === 'iOS') {
+                $os = 'iOS';
+                $result['device'] = 'Mobile';
+            } elseif ($os === 'Android') {
+                $os = 'Android';
+                $result['device'] = 'Mobile';
+            } elseif ($os === 'Windows') {
+                $os = 'Windows';
+            } elseif ($os === 'Linux') {
+                $os = 'Linux';
+            }
+            
+            $result['os'] = $os;
+        }
+        
+        // Détection des appareils mobiles et tablettes
+        if (preg_match('/(iPad|iPhone|iPod|Android|BlackBerry|Windows Phone)/i', $userAgent)) {
+            if (preg_match('/iPad/i', $userAgent)) {
+                $result['device'] = 'Tablette';
+                $result['os'] = 'iPadOS';
+            } elseif (preg_match('/(iPhone|iPod)/i', $userAgent)) {
+                $result['device'] = 'Mobile';
+                $result['os'] = 'iOS';
+            } elseif (preg_match('/Android/i', $userAgent)) {
+                if (preg_match('/Mobile/i', $userAgent)) {
+                    $result['device'] = 'Mobile';
+                } else {
+                    $result['device'] = 'Tablette';
+                }
+            }
+        }
+        
+        return $result;
+    }
         // Récupérer toutes les sessions de l'utilisateur depuis la base de données
         $sessions = \DB::table('sessions')
             ->where('user_id', $user->id)
